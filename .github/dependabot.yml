@@ -1,0 +1,7 @@
+version: 2
+updates:
+  - package-ecosystem: "mix"
+    directory: "/" # Location of your mix.exs file
+    schedule:
+      interval: "weekly" # Options: "daily", "weekly", "monthly"
+    versioning-strategy: "lockfile-only"

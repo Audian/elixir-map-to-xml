@@ -1,0 +1,1 @@
+[verbose: false, private: false, skip: false, router: nil, exit: false, format: "text", out: nil, threshold: :medium, ignore: ["Config.HTTPS", "DOS.StringToAtom", "Traversal.FileModule"], ignore_files: [], version: false]
