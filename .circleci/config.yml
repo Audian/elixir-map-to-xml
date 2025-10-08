@@ -1,0 +1,16 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: cimg/elixir:1.18.4-erlang-26.2.1
+    steps:
+      - checkout
+      - run: mix deps.get
+      - run: mix deps.compile
+      - run: mix deps.audit
+      - run: mix sobelow --config .sobelow-conf
+      - run: mix dialyzer
+workflows:
+  test:
+    jobs:
+      - build
