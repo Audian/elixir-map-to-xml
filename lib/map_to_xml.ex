@@ -130,7 +130,7 @@ defmodule MapToXml do
     if Enum.member?(keys, "#content") do
       attributes =
         for key <- keys, String.slice(key, 0, 1) == "-", into: %{} do
-          {String.slice(key, 1..-1//-1), map[key]}
+          {validate_name!(String.slice(key, 1..-1//1), "attribute"), map[key]}
         end
 
       build_tag(key, map["#content"], attributes)
@@ -140,7 +140,7 @@ defmodule MapToXml do
           build_tag(key, map[key])
         end
 
-      element(key, attributes, tags)
+      element(validate_name!(key, "element"), attributes, tags)
     end
   end
 
@@ -149,6 +149,23 @@ defmodule MapToXml do
   end
 
   defp build_tag(key, value, attributes) do
-    element(key, attributes, "#{value}")
+    element(validate_name!(key, "element"), attributes, "#{value}")
+  end
+
+  # XmlBuilder escapes text and attribute values but writes element and
+  # attribute names verbatim, so an unchecked map key can inject markup.
+  # Accept only names matching (a practical subset of) the XML `Name`
+  # production: a letter, `_` or `:` followed by letters, digits, `.`, `-`,
+  # `_`, `:` or combining marks.
+  @xml_name ~r/\A[\p{L}_:][\p{L}\p{N}\p{M}._:\-]*\z/u
+
+  defp validate_name!(name, kind) do
+    name = to_string(name)
+
+    if Regex.match?(@xml_name, name) do
+      name
+    else
+      raise ArgumentError, "invalid XML #{kind} name: #{inspect(name)}"
+    end
   end
 end

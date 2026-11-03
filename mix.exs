@@ -9,6 +9,11 @@ defmodule MapToXml.MixProject do
       start_permanent: Mix.env() == :prod,
       package: package(),
       deps: deps(),
+      dialyzer: [
+        # parked outside _build so CI can cache the PLT on its own
+        plt_local_path: ".plts",
+        plt_core_path: ".plts"
+      ],
       description: "Convert an Elixir map to an XML document",
       name: "MapToXml",
       docs: [
@@ -35,12 +40,12 @@ defmodule MapToXml.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:xml_builder,  "~> 2.4"},
-      {:ex_doc,       ">= 0.0.0", only: :dev,           runtime: false},
-      {:credo,        "~> 1.7",   only: [:dev, :test],  runtime: false},
-      {:dialyxir,     "~> 1.4",   only: [:dev, :test],  runtime: false},
-      {:mix_audit,    "~> 2.1",   only: [:dev, :test],  runtime: false},
-      {:sobelow,      "~> 0.13",  only: [:dev]},
+      {:xml_builder, "~> 2.4.1"},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false}
     ]
   end
 end
