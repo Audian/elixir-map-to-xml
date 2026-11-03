@@ -1,16 +1,93 @@
+# CircleCI pipeline, modelled on Synapse's.
+#
+# build: static checks (deps.audit, hex.audit, compile with warnings as errors, unused-dep
+#   check, format, credo, sobelow) and dialyzer, with the PLT cached in .plts.
+# test:  `mix test`.
+#
+# Image tag verified on Docker Hub 2026-11-03: cimg/elixir:1.19.5-erlang-26.2.3.
+#
+# This repo has no .tool-versions, so the PLT cache key names the image's
+# Elixir/OTP versions directly. Keep the `elixir-…-otp-…` segment of the PLT
+# keys in step with the image tag whenever the image changes.
 version: 2.1
 jobs:
   build:
+    environment:
+      MIX_ENV: test
     docker:
-      - image: cimg/elixir:1.18.4-erlang-26.2.1
+      - image: cimg/elixir:1.19.5-erlang-26.2.3
     steps:
       - checkout
+      # cache key: bump the version prefix when the docker image (Elixir/OTP) changes;
+      # deps/_build are keyed to mix.lock
+      - restore_cache:
+          keys:
+            - v1-build-{{ checksum "mix.lock" }}
+            - v1-build-
+      # The PLT is cached separately from deps/_build: mix.exs parks it in
+      # .plts (outside _build), so a dependency bump updates it incrementally
+      # instead of discarding it and rebuilding from scratch.
+      #
+      # The exact key includes mix.lock as well as the toolchain because
+      # CircleCI caches are immutable on write: a key that only tracked the
+      # toolchain would be written once and never refreshed, so every later run
+      # would restore a stale PLT, redo the same incremental update and discard
+      # it. Including mix.lock means a new cache is written whenever the
+      # dependency set changes, while the toolchain-only fallback still supplies
+      # a warm PLT to update from.
+      - restore_cache:
+          keys:
+            - v1-plt-elixir-1.19.5-otp-26.2.3-{{ checksum "mix.lock" }}
+            - v1-plt-elixir-1.19.5-otp-26.2.3
+            - v1-plt-
       - run: mix deps.get
       - run: mix deps.compile
+      # mix_audit and hex.audit read different advisory feeds; on 2026-11-03
+      # deps.audit missed three xml_builder 2.4.0 advisories hex.audit caught,
+      # so run both.
       - run: mix deps.audit
+      - run: mix hex.audit
+      - run: mix compile --warnings-as-errors
+      - run: mix deps.unlock --check-unused
+      - run: mix format --check-formatted
+      - run: mix credo
       - run: mix sobelow --config .sobelow-conf
+      # build the PLT separately so it is cached even when the analysis
+      # step below fails with findings
+      - run: mix dialyzer --plt
+      - save_cache:
+          key: v1-plt-elixir-1.19.5-otp-26.2.3-{{ checksum "mix.lock" }}
+          paths:
+            - .plts
+      - save_cache:
+          key: v1-build-{{ checksum "mix.lock" }}
+          paths:
+            - deps
+            - _build
+            - ~/.mix
       - run: mix dialyzer
+  test:
+    environment:
+      MIX_ENV: test
+    docker:
+      - image: cimg/elixir:1.19.5-erlang-26.2.3
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-test-{{ checksum "mix.lock" }}
+            - v1-test-
+      - run: mix deps.get
+      - run: mix deps.compile
+      - run: mix test
+      - save_cache:
+          key: v1-test-{{ checksum "mix.lock" }}
+          paths:
+            - deps
+            - _build
+            - ~/.mix
 workflows:
   test:
     jobs:
       - build
+      - test

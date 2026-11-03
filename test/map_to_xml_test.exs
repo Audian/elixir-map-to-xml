@@ -122,4 +122,64 @@ defmodule MapToXmlTest do
                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Tag1 id=\"1234\" something=\"value\">value1</Tag1>\n<Tag1 id=\"1234\" something=\"value\">value2</Tag1>"
     end
   end
+
+  describe "name validation" do
+    test "accepts namespaced, dotted, hyphenated and unicode names" do
+      assert MapToXml.from_map(%{
+               "ns:Tag-1.a_b" => %{"#content" => "v", "-xml:lang" => "en"},
+               "café" => "x"
+             }) ==
+               "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<café>x</café>\n<ns:Tag-1.a_b xml:lang=\"en\">v</ns:Tag-1.a_b>"
+    end
+
+    test "rejects element names that inject markup" do
+      assert_raise ArgumentError, ~r/invalid XML element name/, fn ->
+        MapToXml.from_map(%{"a><admin>true</admin><a" => "x"})
+      end
+    end
+
+    test "rejects nested element names that inject markup" do
+      assert_raise ArgumentError, ~r/invalid XML element name/, fn ->
+        MapToXml.from_map(%{"Tag" => %{"x/><evil" => "y"}})
+      end
+    end
+
+    test "rejects attribute names that inject attributes" do
+      assert_raise ArgumentError, ~r/invalid XML attribute name/, fn ->
+        MapToXml.from_map(%{"Tag" => %{"#content" => "v", "-role=\"admin\" x" => "1"}})
+      end
+    end
+
+    test "rejects DOCTYPE injection via element name" do
+      assert_raise ArgumentError, fn ->
+        MapToXml.from_map(%{"!DOCTYPE r [<!ENTITY e SYSTEM \"file:///etc/passwd\">]" => "x"})
+      end
+    end
+
+    test "rejects empty names" do
+      assert_raise ArgumentError, fn -> MapToXml.from_map(%{"" => "x"}) end
+
+      assert_raise ArgumentError, fn ->
+        MapToXml.from_map(%{"Tag" => %{"#content" => "v", "-" => "1"}})
+      end
+    end
+
+    test "rejects names XmlBuilder would reject with ArgumentError, not SanitizationError" do
+      # "e" followed by U+0301 COMBINING ACUTE ACCENT
+      combining = "café"
+
+      assert_raise ArgumentError, ~r/invalid XML element name/, fn ->
+        MapToXml.from_map(%{combining => "x"})
+      end
+
+      assert_raise ArgumentError, ~r/invalid XML attribute name/, fn ->
+        MapToXml.from_map(%{"Tag" => %{"#content" => "v", ("-" <> combining) => "1"}})
+      end
+    end
+
+    test "rejects names starting with a digit or hyphen" do
+      assert_raise ArgumentError, fn -> MapToXml.from_map(%{"1tag" => "x"}) end
+      assert_raise ArgumentError, fn -> MapToXml.from_map(%{"-tag" => "x"}) end
+    end
+  end
 end
