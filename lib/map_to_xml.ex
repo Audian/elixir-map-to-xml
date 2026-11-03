@@ -7,7 +7,7 @@ defmodule MapToXml do
   ```elixir
   def deps do
     [
-      {:elixir_map_to_xml, "~> 0.1.0"}
+      {:elixir_map_to_xml, "~> 0.3.0"}
     ]
   end
   ```
