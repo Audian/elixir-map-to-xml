@@ -164,6 +164,19 @@ defmodule MapToXmlTest do
       end
     end
 
+    test "rejects names XmlBuilder would reject with ArgumentError, not SanitizationError" do
+      # "e" followed by U+0301 COMBINING ACUTE ACCENT
+      combining = "café"
+
+      assert_raise ArgumentError, ~r/invalid XML element name/, fn ->
+        MapToXml.from_map(%{combining => "x"})
+      end
+
+      assert_raise ArgumentError, ~r/invalid XML attribute name/, fn ->
+        MapToXml.from_map(%{"Tag" => %{"#content" => "v", ("-" <> combining) => "1"}})
+      end
+    end
+
     test "rejects names starting with a digit or hyphen" do
       assert_raise ArgumentError, fn -> MapToXml.from_map(%{"1tag" => "x"}) end
       assert_raise ArgumentError, fn -> MapToXml.from_map(%{"-tag" => "x"}) end

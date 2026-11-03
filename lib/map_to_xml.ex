@@ -156,8 +156,10 @@ defmodule MapToXml do
   # attribute names verbatim, so an unchecked map key can inject markup.
   # Accept only names matching (a practical subset of) the XML `Name`
   # production: a letter, `_` or `:` followed by letters, digits, `.`, `-`,
-  # `_`, `:` or combining marks.
-  @xml_name ~r/\A[\p{L}_:][\p{L}\p{N}\p{M}._:\-]*\z/u
+  # `_` or `:`. This is the same rule XmlBuilder (>= 2.4.1) enforces, so every
+  # invalid name raises ArgumentError here rather than
+  # XmlBuilder.SanitizationError during generation. Keep the two in step.
+  @xml_name ~r/\A[\p{L}_:][\p{L}\p{N}._:\-]*\z/u
 
   defp validate_name!(name, kind) do
     name = to_string(name)

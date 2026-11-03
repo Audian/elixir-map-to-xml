@@ -5,7 +5,7 @@ defmodule MapToXml.MixProject do
     [
       app: :elixir_map_to_xml,
       version: "0.3.0",
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       package: package(),
       deps: deps(),
