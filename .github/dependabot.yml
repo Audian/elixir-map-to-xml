@@ -5,3 +5,5 @@ updates:
     schedule:
       interval: "weekly" # Options: "daily", "weekly", "monthly"
     versioning-strategy: "lockfile-only"
+    cooldown:
+      default-days: 7
